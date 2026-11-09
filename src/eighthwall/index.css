@@ -1,0 +1,11 @@
+/*
+ * AR canvas interaction rules.
+ * Full-viewport root lock is intentionally commented out here — XRExtras
+ * FullWindowCanvas owns layout; threejs/index.css handles the desktop Canvas case.
+ */
+
+canvas.r3f {
+  pointer-events: auto;
+  /* Prevent scroll / pull-to-refresh / pinch-zoom from stealing AR touches. */
+  touch-action: none;
+}

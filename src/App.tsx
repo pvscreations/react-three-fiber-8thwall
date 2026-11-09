@@ -1,18 +1,26 @@
-import { Canvas } from "@react-three/fiber";
-import { Leva } from "leva";
-import { Perf } from "r3f-perf";
-import { Experience } from "./experience/Experience";
+/**
+ * App entry switchboard.
+ *
+ * Flip between hosts by commenting:
+ * - `<EighthWall>` → Web AR via 8th Wall + R3F
+ * - `<Threejs>`    → desktop R3F Canvas
+ * - `<Dom>`        → plain HTML (import from ./dom/Dom)
+ *
+ * Scene content is interchangeable — pass any R3F tree as children.
+ */
+import EighthWall from "./eighthwall/EighthWall";
+import TestExperience from "./threejs/components/TestExperience";
 
-function App() {
+// import { Threejs } from "./threejs/Threejs";
+// import Experience from "./threejs/components/Experience";
+
+export default function App() {
   return (
-    <>
-      <Canvas>
-        <Experience />
-        <Perf position="top-left" />
-      </Canvas>
-      <Leva />
-    </>
+    // <Threejs>
+    //   <Experience />
+    // </Threejs>
+    <EighthWall>
+      <TestExperience />
+    </EighthWall>
   );
 }
-
-export default App;
