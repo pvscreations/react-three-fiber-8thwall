@@ -28,12 +28,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pvscreations/react-three-fiber-8thwall.git"
+    "url": "git+https://github.com/nagendra-dharmireddi0/react-three-fiber-8thwall.git"
   },
   "bugs": {
-    "url": "https://github.com/pvscreations/react-three-fiber-8thwall/issues"
+    "url": "https://github.com/nagendra-dharmireddi0/react-three-fiber-8thwall/issues"
   },
-  "homepage": "https://github.com/pvscreations/react-three-fiber-8thwall#readme",
+  "homepage": "https://github.com/nagendra-dharmireddi0/react-three-fiber-8thwall#readme",
   "keywords": [
     "react-three-fiber",
     "r3f",

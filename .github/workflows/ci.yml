@@ -1,5 +1,6 @@
 # Strict order: build → version → (release | npm | vercel)
-# Repository secrets only: NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# npm: trusted publishing (OIDC) — no NPM_TOKEN
+# Vercel secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # See .github/workflows/README.md
 
 name: CI
@@ -57,9 +58,11 @@ jobs:
 
           if [ -z "$latest_tag" ]; then
             version="$pkg_version"
-            tag="v$version"
           else
-            IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+            tag_ver="${latest_tag#v}"
+            # bump from max(package.json, latest tag) so local 0.1.0 beats stale v0.0.x tags
+            base=$(printf '%s\n%s\n' "$tag_ver" "$pkg_version" | sort -V | tail -n 1)
+            IFS='.' read -r major minor patch <<< "$base"
             if [ "$patch" -lt 9 ]; then
               patch=$((patch + 1))
             elif [ "$minor" -lt 9 ]; then
@@ -71,9 +74,9 @@ jobs:
               patch=0
             fi
             version="$major.$minor.$patch"
-            tag="v$version"
           fi
 
+          tag="v$version"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Next version: $tag"
@@ -92,8 +95,11 @@ jobs:
 
   publish_npm:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
-    needs: [version]
+    needs: [version, build]
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -102,13 +108,13 @@ jobs:
           path: ./dist
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Trusted publishing needs Node ≥ 22.14 and npm ≥ 11.5.1
+          node-version: 24
           registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
       - run: |
           npm version ${{ needs.version.outputs.version }} --no-git-tag-version
           npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   deploy_vercel:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
