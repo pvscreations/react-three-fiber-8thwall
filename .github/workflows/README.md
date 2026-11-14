@@ -22,12 +22,20 @@ Your local link file has:
 
 Token must belong to an account that can access that Vercel team/project.
 
-## What runs
+## Job order (strict)
+
+```
+build  ──(must succeed)──►  version  ──►  release_github
+                                      ├──►  publish_npm
+                                      └──►  deploy_vercel
+```
+
+Release / npm / Vercel **do not start** until `build` and then `version` both succeed.
 
 | Event | Jobs |
 | --- | --- |
-| PR → `main` | lint, Vite build, library build |
-| Push → `main` | same + GitHub release, npm publish, Vercel deploy |
+| PR → `main` | `build` only |
+| Push → `main` | `build` → `version` → release + npm + Vercel |
 
 ## Local check (same as CI build job)
 

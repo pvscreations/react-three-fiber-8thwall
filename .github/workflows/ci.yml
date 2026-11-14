@@ -1,6 +1,5 @@
-# Build starter + library; on push to main → GitHub release, npm publish, Vercel deploy.
-# Use Repository secrets (Settings → Secrets → Actions), NOT Environment secrets:
-#   NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# Strict order: build → version → (release | npm | vercel)
+# Repository secrets only: NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # See .github/workflows/README.md
 
 name: CI
@@ -16,6 +15,7 @@ permissions:
   pull-requests: write
 
 jobs:
+  # ── 1. Must pass before anything else ─────────────────────────────
   build:
     runs-on: ubuntu-latest
     steps:
@@ -37,8 +37,9 @@ jobs:
           name: npm_artifacts
           path: ./dist
 
-  get_version:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # ── 2. Version only after build succeeds ──────────────────────────
+  version:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
     needs: [build]
     runs-on: ubuntu-latest
     outputs:
@@ -55,7 +56,6 @@ jobs:
           pkg_version=$(node -p "require('./package.json').version")
 
           if [ -z "$latest_tag" ]; then
-            # First release: use package.json version as-is (e.g. 0.1.0)
             version="$pkg_version"
             tag="v$version"
           else
@@ -78,20 +78,21 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Next version: $tag"
 
+  # ── 3. Only after version (which only runs after build) ───────────
   release_github:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [get_version, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.get_version.outputs.tag }}
+          tag_name: ${{ needs.version.outputs.tag }}
           body_path: CHANGELOG.md
 
   publish_npm:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [get_version, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,23 +104,22 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      # dist already built in `build` job — skip prepublishOnly (needs local tsc)
       - run: |
-          npm version ${{ needs.get_version.outputs.version }} --no-git-tag-version
+          npm version ${{ needs.version.outputs.version }} --no-git-tag-version
           npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   deploy_vercel:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [get_version, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    needs: [version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Deploy from repo root; Vercel runs `npm run build` via vercel.json
       - uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod --yes"
+          # CLI 25 (used by this action) wants --confirm, not --yes
+          vercel-args: "--prod --confirm"
