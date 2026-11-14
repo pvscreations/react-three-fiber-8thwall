@@ -1,85 +1,73 @@
 # `eighthwall`
 
-Web AR host: mounts **React Three Fiber** on top of the **8th Wall (XR8)** camera pipeline.
-
-Use this when you need real-world tracking (SLAM), camera background, and R3F scenes in AR. For desktop-only 3D, use [`../threejs`](../threejs/README.md) instead.
+Mounts **React Three Fiber** on the **8th Wall (XR8)** camera pipeline — one shared WebGLRenderer.
 
 ## Usage
 
 ```tsx
 import EighthWall from "./eighthwall/EighthWall";
-import TestExperience from "./threejs/components/TestExperience";
+import Experience from "./eighthwall/Experience";
 
 export default function App() {
   return (
     <EighthWall>
-      <TestExperience />
+      <Experience />
     </EighthWall>
   );
 }
 ```
 
-Same children contract as `<Threejs>` — swap scene content without touching XR bootstrap.
+## Prerequisites (`index.html`)
 
-## Prerequisites
+1. XR8 / XRExtras / Landing Page script tags  
+2. Canvas with class **`r3f-8thwall`**:
 
-- `index.html` loads XR8 / XRExtras / LandingPage scripts and provides `<canvas class="r3f">`.
-- HTTPS (or localhost) so the camera permission flow works.
-- Device with AR-capable browser when testing on hardware.
+```html
+<canvas class="r3f-8thwall"></canvas>
+```
+
+`EighthWall` uses selector `canvas.r3f-8thwall` (`CANVAS_SELECTOR`). Rename in HTML **and** in code if you change it.
+
+3. HTTPS (or localhost) for camera access.
+4. Canvas CSS in `src/index.css` (`touch-action: none`).
 
 ## Layout
 
 ```
 eighthwall/
-  EighthWall.tsx          React entry — waits for xrloaded, starts XR, pushes children to R3F root
-  setup.ts                window.THREE + R3F extend(THREE)
-  index.css               canvas touch / pointer rules for AR
-  README.md
-  components/
-    Experience.tsx        minimal clickable-box smoke test
+  EighthWall.tsx        React host — xrloaded → initializeXR → R3F children
+  StopR3FRender.tsx     useFrame(..., 1) — XR8 draws, R3F does not gl.render
+  Experience.tsx        sample clickable box
+  setup.ts              window.THREE + R3F extend(THREE)
   pipeline/
-    initializeXR.ts       XR8.addCameraPipelineModules + XR8.run
-    createR3FModule.ts    bridges XR8 Three.js runtime ↔ R3F createRoot
+    initializeXR.ts     standard XR8 modules + R3F bridge last
+    createR3FModule.ts  createRoot on XR8 scene; Timer + advance()
   utils/
-    camera.ts             NDC, projection inverse, syncProjection
-    renderer.ts           resize guard (R3F configure vs XR8 resize)
-    canvas.ts             CSS box size helper
+    camera.ts           NDC / projection inverse / syncProjection
+    renderer.ts         resize guard during R3F configure
+    canvas.ts           CSS box size for R3F
   types/
-    globals.d.ts          ambient XR8 / LandingPage / XRExtras / window.THREE
+    globals.d.ts        XR8 / LandingPage / XRExtras / window.THREE
 ```
 
-## How it works (short)
+## How it works
 
-1. `EighthWall` listens for `xrloaded` (or uses `window.XR8` if already present).
-2. `initializeXR` calls `XR8.XrController.configure({ disableWorldTracking: false, scale: "responsive" })`, then registers pipeline modules and `XR8.run({ canvas })`.
-3. `createR3FModule.onStart` reuses `XR8.Threejs.xrScene()` and mounts an R3F root with `frameloop: "never"`.
-4. Each XR8 frame calls `advance()` so `useFrame` and R3F subscriptions keep running.
-5. Custom event `compute` keeps picking accurate under XR camera / canvas sizing quirks.
+1. `EighthWall` waits for `xrloaded` (or uses `window.XR8` if already there).
+2. `initializeXR` configures world tracking and registers pipeline modules.
+3. `createR3FModule.onStart` reuses `XR8.Threejs.xrScene()` and mounts R3F with `frameloop: "never"`.
+4. Each XR8 frame: `Timer.update()` → `advance(timer.getElapsed())` (drives `useFrame`).
+5. `StopR3FRender` takes render priority `1` so R3F does not call `gl.render` (avoids white screen over the camera feed).
 
-## Pipeline modules (what each does)
+## Do / don’t
 
-| Module | Role |
-| --- | --- |
-| `XR8.GlTextureRenderer` | Draws the camera feed |
-| `XR8.Threejs` | Creates the shared Three.js AR scene |
-| `XR8.XrController` | SLAM / world tracking |
-| `LandingPage` | Desktop / non-AR entry — prompts to open on a supported mobile device |
-| `XRExtras.AlmostThere` | Unsupported browser / device hints |
-| `XRExtras.FullWindowCanvas` | Canvas fills the window |
-| `XRExtras.Loading` | Startup loading screen |
-| `XRExtras.RuntimeError` | Runtime error UI |
-| `createR3FModule` | Custom — mounts R3F on XR8's Three.js runtime |
-
-## Do / don't
-
-| Do | Don't |
+| Do | Don’t |
 | --- | --- |
 | Pass R3F trees as `children` | Create a second `<Canvas>` / WebGLRenderer inside EighthWall |
-| Let XR8 own the camera pose | Drive `camera.position` every frame with a desktop Rig |
-| Keep scene demos in `components/` or shared folders | Put XR pipeline logic inside Experience files |
+| Keep class `r3f-8thwall` on the canvas | Rename the canvas without updating `CANVAS_SELECTOR` |
+| Let XR8 own camera pose | Drive `camera.position` every frame in AR |
 
 ## Related
 
-- Root overview: [`Developer.md`](../../Developer.md)
-- Desktop host: [`../threejs/README.md`](../threejs/README.md)
-- DOM UI: [`../dom/README.md`](../dom/README.md)
+- Root README: [`../../README.md`](../../README.md)
+- Developer map: [`../../Developer.md`](../../Developer.md)
+- CI: [`../../.github/workflows/README.md`](../../.github/workflows/README.md)

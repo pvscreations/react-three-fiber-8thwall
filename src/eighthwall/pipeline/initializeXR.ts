@@ -1,6 +1,8 @@
 /**
  * Wires the XR8 camera pipeline and starts the engine on the given canvas.
  *
+ * Pass the `<canvas class="r3f-8thwall">` element from `index.html`.
+ *
  * Module order matters: camera texture → Three.js scene → XR controller →
  * device / landing UX extras → our R3F content module last.
  */
@@ -10,8 +12,8 @@ import { createR3FModule, type R3FRoot } from "./createR3FModule";
 export type InitializeXROptions = {
   /** Latest scene content; read at `onStart` (and kept fresh via refs in EighthWall). */
   getContent: () => ReactNode;
-  /** Lets EighthWall keep a handle for later `root.render(children)` updates. */
-  onRoot?: (root: R3FRoot) => void;
+  /** Lets EighthWall keep a handle for later `root.render(children)` updates (`null` on detach). */
+  onRoot?: (root: R3FRoot | null) => void;
 };
 
 export function initializeXR(

@@ -1,84 +1,66 @@
 # Developer guide
 
-Map of this repo’s front-end modules and how to switch between them.
-
-## Modules
-
-| Module | Path | Role |
-| --- | --- | --- |
-| **eighthwall** | [`src/eighthwall`](src/eighthwall/README.md) | Web AR via 8th Wall + R3F (shared XR8 Three.js runtime) |
-| **threejs** | [`src/threejs`](src/threejs/README.md) | Desktop R3F `<Canvas>` host |
-| **dom** | [`src/dom`](src/dom/README.md) | Plain React DOM / HTML UI |
-
-Each module has its own `README.md` with usage, layout, and caveats.
+How this starter is wired.
 
 ## Mental model
 
 ```
+index.html
+  ├─ 8th Wall / XRExtras / Landing Page scripts
+  └─ <canvas class="r3f-8thwall">     ← required; EighthWall queries this
+
 App.tsx
-  ├─ <EighthWall>   → XR8 pipeline → R3F root on <canvas class="r3f">
-  │     └─ {children}   any R3F scene
-  ├─ <Threejs>      → R3F <Canvas>
-  │     └─ {children}   same style of R3F scene
-  └─ <Dom>          → HTML only
+  └─ <EighthWall>
+        ├─ <StopR3FRender />          ← injected (R3F must not gl.render)
+        └─ <Experience />             ← your R3F scene
 ```
 
-**Hosts own the runtime. Children own the scene.**  
-Swap experiences by changing children; swap platforms by changing the host in `App.tsx`.
+**Hosts own the runtime. Children own the scene.**
 
-## Switching hosts
+## Canvas class
 
-In [`src/App.tsx`](src/App.tsx):
+| Where | Value |
+| --- | --- |
+| `index.html` | `<canvas class="r3f-8thwall">` |
+| `EighthWall.CANVAS_SELECTOR` | `"canvas.r3f-8thwall"` |
+| `src/index.css` | `canvas.r3f-8thwall { ... }` |
 
-```tsx
-// Web AR
-<EighthWall>
-  <TestExperience />
-</EighthWall>
+Change all three together if you rename the class.
 
-// Desktop R3F
-<Threejs>
-  <TestExperience />
-</Threejs>
-
-// HTML only
-<Dom />
-```
-
-`TestExperience` is intentionally host-agnostic R3F so you can verify both paths with one scene.
-
-## Entry & assets
+## Key files
 
 | File | Purpose |
 | --- | --- |
-| [`index.html`](index.html) | XR8 / XRExtras / LandingPage scripts + `<canvas class="r3f">` + `#root` |
-| [`src/main.tsx`](src/main.tsx) | React bootstrap → `App` |
-| [`src/App.tsx`](src/App.tsx) | Host switchboard |
-| [`src/ImperativeApp.tsx`](src/ImperativeApp.tsx) | Legacy imperative Three.js + XR8 path (no R3F) |
-| [`src/xrStore.ts`](src/xrStore.ts) | Tiny zustand-style XR status store (tracking / placement) |
+| [`index.html`](index.html) | CDNs + `r3f-8thwall` canvas + `#root` |
+| [`src/App.tsx`](src/App.tsx) | Entry — wrap scene in `EighthWall` |
+| [`src/eighthwall/EighthWall.tsx`](src/eighthwall/EighthWall.tsx) | AR host |
+| [`src/eighthwall/StopR3FRender.tsx`](src/eighthwall/StopR3FRender.tsx) | Disable R3F `gl.render` |
+| [`src/eighthwall/pipeline/initializeXR.ts`](src/eighthwall/pipeline/initializeXR.ts) | XR8 pipeline (standard module list) |
+| [`src/eighthwall/pipeline/createR3FModule.ts`](src/eighthwall/pipeline/createR3FModule.ts) | XR8 ↔ R3F bridge |
 
 ## Local development
 
 ```bash
-npm run dev      # Vite --host (HTTPS via basic-ssl for camera)
+npm run dev      # Vite --host + basic-ssl (HTTPS for camera)
 npm run build
 npm run lint
 ```
 
-AR testing needs a secure context and a phone/browser that can access the camera. Desktop `<Threejs>` does not.
+Test AR on a phone on the same LAN using the Network HTTPS URL.
 
-## Where to put new code
+## Non-AR
 
-| You are adding… | Put it in… |
-| --- | --- |
-| A new AR scene / mesh / interaction | R3F component; pass as `<EighthWall>` children (or under `eighthwall/components`) |
-| A desktop-only demo | `threejs/components`, render via `<Threejs>` |
-| HTML UI / overlay | `dom/` (or DOM siblings in `App`) |
-| XR8 pipeline / picking / resize quirks | `eighthwall/pipeline` or `eighthwall/utils` |
-| Shared non-UI state | `src/` (e.g. `xrStore.ts`) |
+```tsx
+import { Canvas } from "@react-three/fiber";
 
-## Docs index
+<Canvas>
+  <Experience />
+</Canvas>
+```
 
-- [`src/eighthwall/README.md`](src/eighthwall/README.md)
-- [`src/threejs/README.md`](src/threejs/README.md)
-- [`src/dom/README.md`](src/dom/README.md)
+Same R3F children; no XR8 / no `r3f-8thwall` canvas required.
+
+## Docs
+
+- User-facing: [`README.md`](README.md)
+- Module detail: [`src/eighthwall/README.md`](src/eighthwall/README.md)

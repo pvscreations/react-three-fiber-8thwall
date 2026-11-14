@@ -1,14 +1,16 @@
 /**
  * XR8 pipeline module that mounts React Three Fiber onto XR8's Three.js runtime.
  *
- * Key constraints vs desktop R3F:
+ * Key constraints vs plain R3F:
  * - Reuse XR8's gl / scene / camera (do not create a second WebGLRenderer).
  * - `frameloop: "never"` — XR8 owns the render loop; we `advance()` in `onUpdate`.
+ * - Drive time with `THREE.Timer` (not deprecated `THREE.Clock`).
  * - Block R3F's configure-time setSize so it does not fight XR8 canvas resizing.
  * - Custom event `compute` so picking uses CSS-box NDC + a fresh projection inverse.
  */
 import { advance, createRoot, events } from "@react-three/fiber";
 import type { ReactNode } from "react";
+import { Timer } from "three";
 import { getCanvasSize } from "../utils/canvas";
 import {
   pointerToNdc,
@@ -22,7 +24,7 @@ export type R3FRoot = ReturnType<typeof createRoot>;
 export type CreateR3FModuleOptions = {
   canvas: HTMLCanvasElement;
   getContent: () => ReactNode;
-  onRoot?: (root: R3FRoot) => void;
+  onRoot?: (root: R3FRoot | null) => void;
 };
 
 export function createR3FModule({
@@ -33,6 +35,7 @@ export function createR3FModule({
   let root: R3FRoot | null = null;
   let baseConfig: Record<string, unknown> | null = null;
   let resizeGuard: ReturnType<typeof guardRendererResize> | null = null;
+  const timer = new Timer();
 
   /** Configure R3F while muting renderer.setSize / setPixelRatio. */
   const configureSafe = async (config: Record<string, unknown>) => {
@@ -54,12 +57,14 @@ export function createR3FModule({
       syncProjection(camera);
 
       // Tell R3F not to overwrite projection / view matrices — XR8 owns the camera.
-      (camera as any).manual = true;
+      (camera as { manual?: boolean }).manual = true;
       resizeGuard = guardRendererResize(renderer);
 
       // Defensive XR pick: CSS NDC + refresh projectionMatrixInverse each pointer event.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const eventManager = (state: any) => ({
         ...events(state),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         compute: (event: any, state: any) => {
           state.pointer.copy(pointerToNdc(event, canvas));
           refreshCameraInverse(state.camera);
@@ -83,17 +88,20 @@ export function createR3FModule({
 
     onCanvasSizeChange: () => {
       if (!root || !baseConfig) return;
-      // Keep XR controller + R3F size in sync when the canvas CSS box changes.
       syncProjection(XR8.Threejs.xrScene().camera);
       void configureSafe(baseConfig);
     },
 
-    // Drive R3F subscriptions (useFrame, etc.) off XR8's frame clock.
-    onUpdate: () => advance(performance.now() / 1000),
+    // Drive R3F useFrame off XR8's frame, timed with THREE.Timer.
+    onUpdate: () => {
+      timer.update();
+      advance(timer.getElapsed());
+    },
 
     onDetach: () => {
       root?.unmount();
       root = null;
+      onRoot?.(null);
     },
   };
 }

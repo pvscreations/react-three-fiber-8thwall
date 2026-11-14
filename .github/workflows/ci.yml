@@ -1,0 +1,122 @@
+# Build starter + library; on push to main → GitHub release, npm publish, Vercel deploy.
+# Secrets: NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# See .github/workflows/README.md
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # Vite starter → dist (upload for Vercel), then lib build overwrites dist for npm
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vercel_artifacts
+          path: ./dist
+      - run: npm run build:lib
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm_artifacts
+          path: ./dist
+
+  get_version:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tagging.outputs.tag }}
+      version: ${{ steps.tagging.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: tagging
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag --sort=-v:refname | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v0.0.0"
+          fi
+          IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+          if [ "$patch" -lt 9 ]; then
+            patch=$((patch + 1))
+          elif [ "$minor" -lt 9 ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            major=$((major + 1))
+            minor=0
+            patch=0
+          fi
+          version="$major.$minor.$patch"
+          tag="v$version"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Next version: $tag"
+
+  release_github:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [get_version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.get_version.outputs.tag }}
+          body_path: CHANGELOG.md
+
+  publish_npm:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [get_version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm_artifacts
+          path: ./dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - run: |
+          npm version ${{ needs.get_version.outputs.version }} --no-git-tag-version
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  deploy_vercel:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [get_version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vercel_artifacts
+          path: ./dist
+      - uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod --confirm"
+          working-directory: ./dist

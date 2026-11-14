@@ -9,7 +9,7 @@ export default function Experience() {
 
   return (
     <mesh
-      position={[0, 0.5, -8]}
+      position={[0, 0.5, -2]}
       onClick={(e) => {
         e.stopPropagation();
         setColor((c) => (c === "red" ? "green" : "red"));

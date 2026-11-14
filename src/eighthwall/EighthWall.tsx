@@ -1,58 +1,77 @@
 /**
  * EighthWall — R3F scene host for 8th Wall Web AR.
  *
- * Mirrors `Threejs` (children-as-scene API), but boots XR8 against the
- * existing `<canvas class="r3f">` in index.html instead of creating a Canvas.
+ * Boots XR8 against `<canvas class="r3f-8thwall">` and mounts children on the
+ * imperative R3F root (no second `<Canvas>` / WebGLRenderer).
  *
- * Renders nothing to the React DOM tree; scene content is mounted onto the
- * imperative R3F root created inside the XR8 pipeline module.
+ * Prerequisites in `index.html`:
+ * - 8th Wall / XRExtras / Landing Page script tags
+ * - `<canvas class="r3f-8thwall"></canvas>`
  */
 import { useEffect, useRef, type ReactNode } from "react";
-import "./index.css";
 import "./setup";
 import type { R3FRoot } from "./pipeline/createR3FModule";
 import { initializeXR } from "./pipeline/initializeXR";
+import { StopR3FRender } from "./StopR3FRender";
+
+/** CSS selector for the XR canvas — must match `index.html`. */
+export const CANVAS_SELECTOR = "canvas.r3f-8thwall";
 
 type EighthWallProps = {
-  /** R3F scene graph — same contract as `<Threejs>{children}</Threejs>`. */
+  /** R3F scene graph — same contract as `<Canvas>{children}</Canvas>`. */
   children?: ReactNode;
 };
 
 export function EighthWall({ children }: EighthWallProps) {
-  // XR8.run must only fire once (StrictMode remounts effects in dev).
+  // Latch only after initializeXR runs (StrictMode remounts must not skip boot).
   const started = useRef(false);
   const rootRef = useRef<R3FRoot | null>(null);
 
-  // Keep a live ref so the pipeline `onStart` always renders the latest children
-  // even if XR8 finishes loading after a React re-render.
+  // Live ref so pipeline onStart always sees latest children.
   const childrenRef = useRef(children);
   childrenRef.current = children;
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
+    const canvas = document.querySelector(
+      CANVAS_SELECTOR,
+    ) as HTMLCanvasElement | null;
+    if (!canvas) {
+      console.error(
+        `[EighthWall] Missing <canvas class="r3f-8thwall"> in index.html.`,
+      );
+      return;
+    }
 
-    const canvas = document.querySelector("canvas.r3f") as HTMLCanvasElement;
-    if (!canvas) return;
+    const onXrLoaded = () => {
+      if (started.current) return;
+      started.current = true;
 
-    const onXrLoaded = () =>
       initializeXR(canvas, {
-        getContent: () => childrenRef.current,
+        getContent: () => (
+          <>
+            <StopR3FRender />
+            {childrenRef.current}
+          </>
+        ),
         onRoot: (root) => {
           rootRef.current = root;
         },
       });
+    };
 
-    // Engine scripts in index.html are async — may already be ready, or not.
     if (window.XR8) onXrLoaded();
     else window.addEventListener("xrloaded", onXrLoaded);
 
     return () => window.removeEventListener("xrloaded", onXrLoaded);
   }, []);
 
-  // Push React children updates into the imperative R3F root (Canvas-like).
   useEffect(() => {
-    rootRef.current?.render(children ?? null);
+    rootRef.current?.render(
+      <>
+        <StopR3FRender />
+        {children}
+      </>,
+    );
   }, [children]);
 
   return null;

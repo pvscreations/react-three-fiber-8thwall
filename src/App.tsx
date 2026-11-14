@@ -1,26 +1,21 @@
 /**
- * App entry switchboard.
+ * AR starter — R3F scene on 8th Wall via `<EighthWall>`.
  *
- * Flip between hosts by commenting:
- * - `<EighthWall>` → Web AR via 8th Wall + R3F
- * - `<Threejs>`    → desktop R3F Canvas
- * - `<Dom>`        → plain HTML (import from ./dom/Dom)
+ * Requires in index.html:
+ *   - 8th Wall script tags
+ *   - <canvas class="r3f-8thwall"></canvas>
  *
- * Scene content is interchangeable — pass any R3F tree as children.
+ * Non-AR (plain R3F, no 8th Wall):
+ *   import { Canvas } from "@react-three/fiber";
+ *   <Canvas><Experience /></Canvas>
  */
 import EighthWall from "./eighthwall/EighthWall";
-import TestExperience from "./threejs/components/TestExperience";
-
-// import { Threejs } from "./threejs/Threejs";
-// import Experience from "./threejs/components/Experience";
+import Experience from "./eighthwall/Experience";
 
 export default function App() {
   return (
-    // <Threejs>
-    //   <Experience />
-    // </Threejs>
     <EighthWall>
-      <TestExperience />
+      <Experience />
     </EighthWall>
   );
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>xr</title>
+    <title>react-three-fiber-8thwall</title>
     <script
       src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js"
       async
@@ -21,7 +21,8 @@
     ></script>
   </head>
   <body>
-    <canvas class="r3f"></canvas>
+    <!-- Required: EighthWall looks up this canvas by class -->
+    <canvas class="r3f-8thwall"></canvas>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

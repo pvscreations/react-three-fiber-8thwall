@@ -3,6 +3,8 @@ import type * as THREE from "three";
 /**
  * Mute `setSize` / `setPixelRatio` only while R3F `configure` runs.
  * XR8 (FullWindowCanvas) must still be able to resize the renderer afterward.
+ *
+ * Stays locked until async `fn` settles (configure returns a Promise).
  */
 export function guardRendererResize(renderer: THREE.WebGLRenderer) {
   const setSize = renderer.setSize.bind(renderer);
@@ -22,10 +24,10 @@ export function guardRendererResize(renderer: THREE.WebGLRenderer) {
   }) as THREE.WebGLRenderer["setPixelRatio"];
 
   return {
-    withoutResize<T>(fn: () => T): T {
+    async withoutResize<T>(fn: () => T | Promise<T>): Promise<T> {
       locked = true;
       try {
-        return fn();
+        return await fn();
       } finally {
         locked = false;
       }

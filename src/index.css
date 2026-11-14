@@ -1,0 +1,5 @@
+/* Starter page + AR canvas touch rules (class must match index.html). */
+canvas.r3f-8thwall {
+  pointer-events: auto;
+  touch-action: none;
+}

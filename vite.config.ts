@@ -1,7 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import basicSSl from "@vitejs/plugin-basic-ssl";
-import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,15 +11,15 @@ export default defineConfig({
     host: true, // Open to local network and display URL
   },
   build: {
-    outDir: "./dist", // Output in the dist/ folder
-    emptyOutDir: true, // Empty the folder first
-    sourcemap: true, // Add sourcemap
+    outDir: "./dist",
+    emptyOutDir: true,
+    sourcemap: true,
   },
 
   plugins: [
     react(),
     basicSSl(),
-    tailwindcss(),
+
     {
       name: "watch-and-reload",
       configureServer(server) {
