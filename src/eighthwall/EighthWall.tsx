@@ -27,9 +27,8 @@ export function EighthWall({ children }: EighthWallProps) {
   const started = useRef(false);
   const rootRef = useRef<R3FRoot | null>(null);
 
-  // Live ref so pipeline onStart always sees latest children.
+  // Live ref so pipeline onStart always sees latest children (updated in effect).
   const childrenRef = useRef(children);
-  childrenRef.current = children;
 
   useEffect(() => {
     const canvas = document.querySelector(
@@ -66,6 +65,7 @@ export function EighthWall({ children }: EighthWallProps) {
   }, []);
 
   useEffect(() => {
+    childrenRef.current = children;
     rootRef.current?.render(
       <>
         <StopR3FRender />
