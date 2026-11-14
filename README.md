@@ -3,14 +3,17 @@
 **Starter** for Web AR: run [React Three Fiber](https://github.com/pmndrs/react-three-fiber) and [8th Wall](https://www.8thwall.com/) **together** — **one canvas, one WebGLRenderer, one render path**.
 
 **Demo:** [react-three-fiber-8thwall.vercel.app](https://react-three-fiber-8thwall.vercel.app/)  
-**npm:** [react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall)
+**npm:** [react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall)  
+**Article:** [React Three Fiber and 8th Wall on One WebGLRenderer](https://medium.com/@nagendra10082003/react-three-fiber-and-8th-wall-on-one-webglrenderer-ba36b6ea7546)
 
-### Design points
+![One canvas, one WebGLRenderer — XR8 drives the runtime; R3F owns the scene graph](docs/r3f-8thwall-architecture.jpg)
+
+### Benefits
 
 - **One canvas, one `WebGLRenderer`** — R3F reuses XR8’s `gl`, `scene`, and `camera`. No nested `<Canvas>`, no second renderer.
 - **One draw path** — XR8.Threejs renders the camera feed + scene. `StopR3FRender` stops R3F from also calling `gl.render`.
-- **XR8 drives the frame** — R3F `frameloop: "never"`; on each XR8 `onUpdate` we `advance()` so `useFrame` runs on XR8’s tick.
-- **Resize without fighting XR8** — during R3F `configure`, `setSize` / `setPixelRatio` are muted so XR8 (e.g. FullWindowCanvas) keeps control. On XR8 `onCanvasSizeChange` we pass the canvas CSS box into R3F (helps picking stay aligned).
+- **Stable frame timing** — R3F `frameloop: "never"`; XR8 `onUpdate` calls `advance()` so `useFrame` runs on XR8’s tick.
+- **Cleaner resize / picking** — R3F `setSize` is muted during configure so it doesn’t fight XR8; on canvas size change we pass the CSS box into R3F.
 
 ## Run the starter
 
