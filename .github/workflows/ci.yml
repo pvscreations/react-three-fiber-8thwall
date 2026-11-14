@@ -1,5 +1,6 @@
 # Build starter + library; on push to main → GitHub release, npm publish, Vercel deploy.
-# Secrets: NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# Use Repository secrets (Settings → Secrets → Actions), NOT Environment secrets:
+#   NPM_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # See .github/workflows/README.md
 
 name: CI
@@ -25,7 +26,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      # Vite starter → dist (upload for Vercel), then lib build overwrites dist for npm
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
@@ -52,22 +52,28 @@ jobs:
         run: |
           git fetch --tags
           latest_tag=$(git tag --sort=-v:refname | head -n 1)
+          pkg_version=$(node -p "require('./package.json').version")
+
           if [ -z "$latest_tag" ]; then
-            latest_tag="v0.0.0"
-          fi
-          IFS='.' read -r major minor patch <<< "${latest_tag#v}"
-          if [ "$patch" -lt 9 ]; then
-            patch=$((patch + 1))
-          elif [ "$minor" -lt 9 ]; then
-            minor=$((minor + 1))
-            patch=0
+            # First release: use package.json version as-is (e.g. 0.1.0)
+            version="$pkg_version"
+            tag="v$version"
           else
-            major=$((major + 1))
-            minor=0
-            patch=0
+            IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+            if [ "$patch" -lt 9 ]; then
+              patch=$((patch + 1))
+            elif [ "$minor" -lt 9 ]; then
+              minor=$((minor + 1))
+              patch=0
+            else
+              major=$((major + 1))
+              minor=0
+              patch=0
+            fi
+            version="$major.$minor.$patch"
+            tag="v$version"
           fi
-          version="$major.$minor.$patch"
-          tag="v$version"
+
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Next version: $tag"
@@ -97,9 +103,10 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
+      # dist already built in `build` job — skip prepublishOnly (needs local tsc)
       - run: |
           npm version ${{ needs.get_version.outputs.version }} --no-git-tag-version
-          npm publish --access public
+          npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -109,14 +116,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: vercel_artifacts
-          path: ./dist
+      # Deploy from repo root; Vercel runs `npm run build` via vercel.json
       - uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod --confirm"
-          working-directory: ./dist
+          vercel-args: "--prod --yes"
