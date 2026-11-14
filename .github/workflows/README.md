@@ -11,7 +11,7 @@ CI publishes with **OIDC** (GitHub ↔ npm). No long-lived npm token in GitHub s
 1. Open [npmjs.com/package/react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall) while logged in as the package owner.
 2. **Settings** → **Trusted Publisher** → **GitHub Actions**.
 3. Fill in exactly:
-   - **Organization or user:** `nagendra-dharmireddi0`
+   - **Organization or user:** `nagendra-dharmireddi`
    - **Repository:** `react-three-fiber-8thwall`
    - **Workflow filename:** `ci.yml` (filename only, not a path)
    - **Environment:** leave empty (we don’t use GitHub Environments)

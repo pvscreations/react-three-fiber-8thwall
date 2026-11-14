@@ -2,10 +2,13 @@
 
 **Starter** for Web AR: run [React Three Fiber](https://github.com/pmndrs/react-three-fiber) on [8th Wall](https://www.8thwall.com/) with **one shared WebGLRenderer** — no second `<Canvas>`, no fighting the SLAM camera.
 
+**Demo:** [react-three-fiber-8thwall.vercel.app](https://react-three-fiber-8thwall.vercel.app/)  
+**npm:** [react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall)
+
 ## Run the starter
 
 ```bash
-git clone https://github.com/pvscreations/react-three-fiber-8thwall.git
+git clone https://github.com/nagendra-dharmireddi/react-three-fiber-8thwall.git
 cd react-three-fiber-8thwall
 npm install
 npm run dev
@@ -101,7 +104,7 @@ MIT
 
 ## Using as an npm package (optional)
 
-This repo is primarily a **starter**. Publishing as a package is optional:
+This repo is primarily a **starter**. Package: [npmjs.com/package/react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall)
 
 ```bash
 npm install react-three-fiber-8thwall three @react-three/fiber
