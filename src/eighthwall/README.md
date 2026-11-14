@@ -1,6 +1,11 @@
 # `eighthwall`
 
-Mounts **React Three Fiber** on the **8th Wall (XR8)** camera pipeline — one shared WebGLRenderer.
+Runs **React Three Fiber** and **8th Wall (XR8)** together: **one canvas, one WebGLRenderer**.
+
+- R3F reuses XR8’s `gl` / scene / camera (no second Canvas/renderer).
+- XR8 draws; `StopR3FRender` blocks R3F’s `gl.render`.
+- R3F `frameloop: "never"`; XR8 `onUpdate` → `advance()`.
+- Resize: mute R3F `setSize` during configure; on XR8 canvas size change, feed CSS box size into R3F.
 
 ## Usage
 
@@ -62,9 +67,9 @@ eighthwall/
 
 | Do | Don’t |
 | --- | --- |
-| Pass R3F trees as `children` | Create a second `<Canvas>` / WebGLRenderer inside EighthWall |
+| Pass R3F trees as `children` | Create a second `<Canvas>` / WebGLRenderer |
 | Keep class `r3f-8thwall` on the canvas | Rename the canvas without updating `CANVAS_SELECTOR` |
-| Let XR8 own camera pose | Drive `camera.position` every frame in AR |
+| Let XR8 drive render, frame tick, camera pose | Nest a second Canvas or fight XR8 with R3F `gl.render` / `setSize` / camera pose |
 
 ## Related
 

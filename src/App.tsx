@@ -1,5 +1,5 @@
 /**
- * AR starter — R3F scene on 8th Wall via `<EighthWall>`.
+ * AR starter — R3F + 8th Wall together via `<EighthWall>`.
  *
  * Requires in index.html:
  *   - 8th Wall script tags

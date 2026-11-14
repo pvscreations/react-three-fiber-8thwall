@@ -1,7 +1,7 @@
 {
   "name": "react-three-fiber-8thwall",
   "version": "0.1.0",
-  "description": "Starter and package to run React Three Fiber on 8th Wall with one shared WebGLRenderer.",
+  "description": "Run React Three Fiber and 8th Wall together — one canvas, one WebGLRenderer; XR8 drives render and frame tick.",
   "license": "MIT",
   "author": "Nagendra Dharmireddi",
   "type": "module",

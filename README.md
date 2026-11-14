@@ -1,9 +1,16 @@
 # react-three-fiber-8thwall
 
-**Starter** for Web AR: run [React Three Fiber](https://github.com/pmndrs/react-three-fiber) on [8th Wall](https://www.8thwall.com/) with **one shared WebGLRenderer** — no second `<Canvas>`, no fighting the SLAM camera.
+**Starter** for Web AR: run [React Three Fiber](https://github.com/pmndrs/react-three-fiber) and [8th Wall](https://www.8thwall.com/) **together** — **one canvas, one WebGLRenderer, one render path**.
 
 **Demo:** [react-three-fiber-8thwall.vercel.app](https://react-three-fiber-8thwall.vercel.app/)  
 **npm:** [react-three-fiber-8thwall](https://www.npmjs.com/package/react-three-fiber-8thwall)
+
+### Design points
+
+- **One canvas, one `WebGLRenderer`** — R3F reuses XR8’s `gl`, `scene`, and `camera`. No nested `<Canvas>`, no second renderer.
+- **One draw path** — XR8.Threejs renders the camera feed + scene. `StopR3FRender` stops R3F from also calling `gl.render`.
+- **XR8 drives the frame** — R3F `frameloop: "never"`; on each XR8 `onUpdate` we `advance()` so `useFrame` runs on XR8’s tick.
+- **Resize without fighting XR8** — during R3F `configure`, `setSize` / `setPixelRatio` are muted so XR8 (e.g. FullWindowCanvas) keeps control. On XR8 `onCanvasSizeChange` we pass the canvas CSS box into R3F (helps picking stay aligned).
 
 ## Run the starter
 
@@ -62,21 +69,22 @@ Already set up in this starter. Keep them if you copy files elsewhere:
 | Piece | Role |
 | --- | --- |
 | `EighthWall` | Boots XR8, mounts your R3F children on the shared scene |
-| `StopR3FRender` | `useFrame(..., 1)` so R3F does **not** call `gl.render` (XR8 draws the camera + scene) |
-| `createR3FModule` | Shares XR8 gl / scene / camera; `frameloop: "never"` + `THREE.Timer` + `advance()` |
+| `StopR3FRender` | `useFrame(..., 1)` so R3F does **not** call `gl.render` (XR8 draws) |
+| `createR3FModule` | Shared XR8 `gl` / scene / camera; `frameloop: "never"`; XR8 `onUpdate` → `advance()`; resize guard + CSS size on canvas change |
 | `initializeXR` | Standard 8th Wall pipeline modules; R3F bridge last |
 
-**Hosts own the runtime. Children own the scene.**
+**XR8 drives render + frame tick. R3F children own the scene graph.**
 
 ## Common mistakes
 
 1. Missing 8th Wall script tags in `index.html`
 2. Missing or misnamed canvas — must be `class="r3f-8thwall"`
 3. Missing canvas CSS (`touch-action: none` in `src/index.css`)
-4. Nesting a second R3F `<Canvas>` inside `EighthWall`
-5. White screen — R3F was clearing the camera feed; `StopR3FRender` prevents that (injected by `EighthWall`)
-6. Overwriting `camera.position` every frame in AR — let 8th Wall own SLAM pose
-7. Testing over plain HTTP — use the HTTPS URL from `npm run dev`
+4. Nesting a second R3F `<Canvas>` / second renderer inside `EighthWall`
+5. Letting R3F also `gl.render` — fights XR8’s draw (often a white screen)
+6. Letting R3F `setSize` run against XR8 during configure — can desync buffer vs layout
+7. Overwriting `camera.position` every frame in AR — let XR8 own SLAM pose
+8. Testing over plain HTTP — use the HTTPS URL from `npm run dev`
 
 ## Project layout
 
